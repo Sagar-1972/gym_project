@@ -25,33 +25,93 @@ if(!$result){
 }
 
 ?>
+
 <!DOCTYPE html>
 <html>
 <head>
-<title>User Dashboard</title>
+<title>Gym Members</title>
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
 <style>
+
 body{
 margin:0;
 font-family:'Poppins',sans-serif;
 background:url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48') no-repeat center center/cover;
 }
+
 /* DARK OVERLAY */
+
 .overlay{
 min-height:100vh;
-background:linear-gradient(120deg,rgba(0,0,0,0.95),rgba(0,0,0,0.85));
+background:linear-gradient(rgba(0,0,0,0.9),rgba(0,0,0,0.85));
 padding:40px;
 }
-/* TOP BAR */
-.top{
-display:flex;
-justify-content:space-between;
-align-items:center;
+
+/* TITLE */
+
+h1{
+text-align:center;
 color:white;
 margin-bottom:30px;
 }
-.logout{
+
+/* GLASS TABLE BOX */
+
+.table-box{
+background:rgba(255,255,255,0.08);
+backdrop-filter:blur(12px);
+padding:25px;
+border-radius:20px;
+box-shadow:0 20px 40px rgba(0,0,0,0.7);
+}
+
+/* TABLE */
+
+table{
+width:100%;
+border-collapse:collapse;
+color:white;
+}
+
+th{
+background:linear-gradient(45deg,#ff512f,#dd2476);
+padding:14px;
+font-size:15px;
+}
+
+td{
+padding:12px;
+text-align:center;
+background:rgba(255,255,255,0.05);
+}
+
+tr:hover td{
+background:rgba(255,255,255,0.12);
+}
+
+/* BUTTONS */
+
+.update{
+color:#00ffea;
+text-decoration:none;
+font-weight:600;
+}
+
+.delete{
+color:#ff4d4d;
+text-decoration:none;
+font-weight:600;
+}
+
+/* DASHBOARD BUTTON */
+
+.back{
+display:inline-block;
+margin-bottom:20px;
 background:white;
 padding:10px 18px;
 border-radius:12px;
@@ -59,52 +119,23 @@ text-decoration:none;
 color:black;
 font-weight:600;
 }
-.logout:hover{
+
+.back:hover{
 background:#ff512f;
 color:white;
 }
-/* GLASS TABLE BOX */
-.table-box{
-background:rgba(255,255,255,0.08);
-backdrop-filter:blur(18px);
-padding:25px;
-border-radius:25px;
-box-shadow:0 20px 60px rgba(0,0,0,0.8);
-overflow:auto;
-}
-/* TABLE */
-table{
-width:100%;
-border-collapse:collapse;
-color:white;
-}
-th{
-background:linear-gradient(45deg,#ff512f,#dd2476);
-padding:14px;
-}
-td{
-padding:12px;
-text-align:center;
-background:rgba(255,255,255,0.05);
-}
-tr:hover td{
-background:rgba(255,255,255,0.12);
-}
-h1{
-text-align:center;
-color:white;
-margin-bottom:25px;
-}
+
 </style>
 </head>
+
 <body>
+
 <div class="overlay">
-<div class="top">
-<h2>👋 Welcome User</h2>
-<a class="logout" href="logout.php">Logout</a>
-</div>
-<h1>💪 Your Gym Membership</h1>
-<?    
+
+<a class="back" href="admin_dashboard.php">← Dashboard</a>
+
+<h1>💪 Gym Members List</h1>
+<?php
 $count_query = "SELECT COUNT(*) as total FROM members";
 $where = "";
 
@@ -135,44 +166,51 @@ Search
 </form>
 
 <div class="table-box">
+
 <table>
+
 <tr>
-<th>SL NO</th>
+<th>ID</th>
 <th>Name</th>
 <th>Age</th>
 <th>Gender</th>
-<th>Phone</th>
+<th>Contact</th>
+<th>Batch</th>
 <th>Plan</th>
 <th>Fees</th>
 <th>Join Date</th>
+<th>Action</th>
 </tr>
-<?php
-$q = "SELECT * FROM members $where ORDER BY id ASC LIMIT $start,$limit";
-$res=mysqli_query($conn,$q);
-$count_q = "SELECT COUNT(*) as total FROM members $where";
-$count_result = mysqli_query($conn,$count_q);
-$total_row = mysqli_fetch_assoc($count_result);
-$total_records = $total_row['total'];
 
-$total_pages = ceil($total_records / $limit);    
-while($row=mysqli_fetch_assoc($res))
+<?php
+
+
+$sn = $start + 1;
+while($row=mysqli_fetch_assoc($result))
 {
-echo "<tr>
-<td>".$slno."</td>
-<td>".$row['NAME']."</td>
-<td>".$row['Age']."</td>
-<td>".$row['Gender']."</td>
-<td>".$row['CONTACT NO']."</td>
-<td>".$row['PLAN']."</td>
-<td>".$row['FEES']."</td>
-<td>".$row['Join_date']."</td>
-</tr>";
-$slno++;
+?>
+<tr>
+<td><?php echo $sn++; ?></td>
+<td><?php echo $row['NAME']; ?></td>
+<td><?php echo $row['Age']; ?></td>
+<td><?php echo $row['Gender']; ?></td>
+<td><?php echo $row['CONTACT NO']; ?></td>
+<td><?php echo $row['BATCH']; ?></td>
+<td><?php echo $row['PLAN']; ?></td>
+<td><?php echo $row['FEES']; ?></td>
+<td><?php echo $row['Join_date']; ?></td>
+
+<td>
+<a class="update" href="update.php?id=<?php echo $row['ID']; ?>">Update</a> |
+<a class="delete" href="delete.php?id=<?php echo $row['ID']; ?>">Delete</a>
+</td>
+</tr>
+
+<?php
 }
 ?>
+
 </table>
-</table>
-<div>
 <?php
 $total_query = "SELECT COUNT(*) as total FROM members".$where;
 
@@ -208,6 +246,6 @@ echo "</div>";
 
 </div>
 </div>
-</div>
+
 </body>
 </html>

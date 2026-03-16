@@ -25,11 +25,8 @@ else
 {
 $msg="Error Adding Member";
 }
-
 }
 ?>
-
-
 <!DOCTYPE html>
 <html>
 <head>
