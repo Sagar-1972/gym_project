@@ -2,28 +2,49 @@
 session_start();
 include("db.php");
 
-$limit = 5;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-if($page < 1){ $page = 1; }
+$email = $_SESSION['user'];
 
-$start = ($page - 1) * $limit;
-$slno = $start +1;
-
-
-$q = "SELECT * FROM members";
-$where = "";
-if(isset($_GET['search']) && $_GET['search'] != ""){
-    $search = mysqli_real_escape_string($conn,$_GET['search']);
-    $where = " WHERE NAME LIKE '%$search%'";
-}
-$q .= $where;
-$q .= " ORDER BY ID ASC LIMIT ".$start.",".$limit;
+$q = "SELECT * FROM members WHERE email='$email'";
 $result = mysqli_query($conn,$q);
+$row = mysqli_fetch_assoc($result);
 
-if(!$result){
-    die(mysqli_error($conn));
+$plan_months = $_POST['plan_months'];
+$join = new DateTime($row['Join_date']);
+
+$plan = $row['PLAN'];
+
+if($plan == "MONTHLY"){
+    $months = 1;
+}
+else if($plan == "QUARTERLY"){
+    $months = 3;
+}
+else if($plan == "HALF YEAR"){
+    $months = 6;
+}
+else if($plan == "ANNUALLY"){
+    $months = 12;
+}
+else{
+    $months = 0;
 }
 
+$expiry_date = clone $join;
+$expiry_date->modify("+".$months." months");
+
+$expiry = $expiry_date->format('Y-m-d');
+
+$today = new DateTime();
+
+if($today > $expiry_date)
+{
+    $status = "Expired";
+    $remaining = 0;
+}
+else{
+    $status = "Active";
+    $remaining = $today->diff($expiry_date)->days;
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -97,117 +118,59 @@ margin-bottom:25px;
 }
 </style>
 </head>
-<body>
-<div class="overlay">
-<div class="top">
-<h2>👋 Welcome User</h2>
-<a class="logout" href="logout.php">Logout</a>
-</div>
-<h1>💪 Your Gym Membership</h1>
-<?    
-$count_query = "SELECT COUNT(*) as total FROM members";
-$where = "";
+<div style="width:500px;margin:80px auto;padding:30px;
+background:#f2f2f2;border-radius:15px;
+box-shadow:0px 0px 15px gray;text-align:center;">
 
-if(isset($_GET['search']) && $_GET['search'] != ""){
-    $search = mysqli_real_escape_string($conn,$_GET['search']);
-    $where = " WHERE NAME LIKE '%$search%'";
-}
+<h1 style="color:#333;">🏋️ Gym Member Dashboard</h1>
 
-$count_query .= $where;
-$countq = mysqli_query($conn,$count_query);
-$countdata = mysqli_fetch_assoc($countq);
-?>
+<h2 style="color:green;">
+Welcome <?php echo $row['NAME']; ?>
+</h2>
 
-<div style="background:linear-gradient(45deg,#ff512f,#dd2476);
-padding:12px;border-radius:10px;color:white;
-width:220px;margin-bottom:15px;font-size:22px;">
-Total Members : <?php echo $countdata['total']; ?>
-</div>
+<hr>
+<p style="font-size:18px;">
+💪 Your Gym Plan :
+<br>
+<b><?php echo $row['PLAN']; ?></b>
+</p>
+<p style="font-size:18px;">
+📅 Your Membership Started On :
+<br>
+<b><?php echo $row['Join_date']; ?></b>
+</p>
+<p>📆 Expiry Date :<br>
+<b><?php echo $expiry;?></b></p>
 
-<form method="GET" style="margin-bottom:15px;">
-<input type="text" name="search"
-value="<?php if(isset($_GET['search'])) echo $_GET['search']; ?>"
-placeholder="Search Name..."
-style="padding:10px;border-radius:8px;width:250px;">
-<button style="padding:10px;background:#ff512f;color:white;border:none;border-radius:8px;">
-Search
+<p><b>⏳ Remaining Days :</b><br>
+<?php echo ($status=="Expired") ? "0" : $remaining; ?> Days</p>
+
+<p><b>Status :</b><br>
+
+<span style="
+color:<?php echo ($status=='Active') ? 'green' : 'red'; ?>;
+font-size:20px;
+font-weight:bold;
+">
+<?php echo $status; ?>
+</span>
+
+</p>
+<p style="font-size:18px;">
+💰 Fees Paid :
+<br>
+<b><?php echo $row['FEES']; ?></b>
+</p>
+
+
+<a href="logout.php">
+<button style="padding:10px 20px;
+background:red;color:white;border:none;
+border-radius:8px;font-size:16px;">
+Logout
 </button>
-</form>
+</a>
 
-<div class="table-box">
-<table>
-<tr>
-<th>SL NO</th>
-<th>Name</th>
-<th>Age</th>
-<th>Gender</th>
-<th>Phone</th>
-<th>Plan</th>
-<th>Fees</th>
-<th>Join Date</th>
-</tr>
-<?php
-$q = "SELECT * FROM members $where ORDER BY id ASC LIMIT $start,$limit";
-$res=mysqli_query($conn,$q);
-$count_q = "SELECT COUNT(*) as total FROM members $where";
-$count_result = mysqli_query($conn,$count_q);
-$total_row = mysqli_fetch_assoc($count_result);
-$total_records = $total_row['total'];
-
-$total_pages = ceil($total_records / $limit);    
-while($row=mysqli_fetch_assoc($res))
-{
-echo "<tr>
-<td>".$slno."</td>
-<td>".$row['NAME']."</td>
-<td>".$row['Age']."</td>
-<td>".$row['Gender']."</td>
-<td>".$row['CONTACT NO']."</td>
-<td>".$row['PLAN']."</td>
-<td>".$row['FEES']."</td>
-<td>".$row['Join_date']."</td>
-</tr>";
-$slno++;
-}
-?>
-</table>
-</table>
-<div>
-<?php
-$total_query = "SELECT COUNT(*) as total FROM members".$where;
-
-$totalq = mysqli_query($conn,$total_query);
-$totaldata = mysqli_fetch_assoc($totalq);
-$total_pages = ceil($totaldata['total']/$limit);
-echo "<div style='margin-top:15px;'>";
-
-$search_param = "";
-if(isset($_GET['search']) && $_GET['search'] != ""){
-    $search_param = "&search=".$_GET['search'];
-}
-    
-if($page > 1){
-echo "<a href='?page=".($page-1).
-$search_param."'
-style='padding:8px 12px;background:black;color:white;margin:5px;text-decoration:none;border-radius:6px;'>Previous</a>";
-}
-
-for($i=1;$i<=$total_pages;$i++){
-echo "<a href='?page=".$i.$search_param."' 
-style='padding:8px 12px;background:#ff512f;color:white;margin:5px;text-decoration:none;border-radius:6px;'>$i</a>";
-}
-
-if($page < $total_pages){
-echo "<a href='?page=".($page+1). 
-$search_param."'
-style='padding:8px 12px;background:black;color:white;margin:5px;text-decoration:none;border-radius:6px;'>Next</a>";
-}
-
-echo "</div>";
-?>
-
-</div>
-</div>
 </div>
 </body>
 </html>

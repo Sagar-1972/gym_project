@@ -1,7 +1,26 @@
 <?php
 session_start();
 include("db.php");
+$status = "";
+if(isset($_GET['status'])){
+    $status = $_GET['status'];
+}
+$total_q = mysqli_query($conn,"SELECT COUNT(*) as total FROM members");
+$total = mysqli_fetch_assoc($total_q)['total'];
 
+$active_q = mysqli_query($conn,"
+SELECT COUNT(*) as active FROM members
+WHERE DATE_ADD(Join_date, INTERVAL 
+CASE 
+WHEN PLAN='MONTHLY' THEN 1
+WHEN PLAN='QUARTERLY' THEN 3
+WHEN PLAN='HALFYEARLY' THEN 6
+WHEN PLAN='ANNUALLY' THEN 12
+END MONTH) >= CURDATE()
+");
+$active = mysqli_fetch_assoc($active_q)['active'];
+
+$expired = $total - $active;
 $limit = 5;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if($page < 1){ $page = 1; }
@@ -10,13 +29,37 @@ $start = ($page - 1) * $limit;
 $slno = $start +1;
 
 
-$q = "SELECT * FROM members";
-$where = "";
-if(isset($_GET['search']) && $_GET['search'] != ""){
-    $search = mysqli_real_escape_string($conn,$_GET['search']);
-    $where = " WHERE NAME LIKE '%$search%'";
+$q = "SELECT * FROM members WHERE 1=1";
+
+/* STATUS FILTER */
+
+if($status == "active"){
+$q .= " AND DATE_ADD(Join_date, INTERVAL 
+CASE 
+WHEN PLAN='MONTHLY' THEN 1
+WHEN PLAN='QUARTERLY' THEN 3
+WHEN PLAN='HALFYEARLY' THEN 6
+WHEN PLAN='ANNUALLY' THEN 12
+END MONTH) >= CURDATE()";
 }
-$q .= $where;
+
+if($status == "expired"){
+$q .= " AND DATE_ADD(Join_date, INTERVAL 
+CASE 
+WHEN PLAN='MONTHLY' THEN 1
+WHEN PLAN='QUARTERLY' THEN 3
+WHEN PLAN='HALFYEARLY' THEN 6
+WHEN PLAN='ANNUALLY' THEN 12
+END MONTH) < CURDATE()";
+}
+
+/* SEARCH FILTER */
+
+if(isset($_GET['search']) && $_GET['search'] != ""){
+$search = mysqli_real_escape_string($conn,$_GET['search']);
+$q .= " AND NAME LIKE '%$search%'";
+}
+
 $q .= " ORDER BY ID ASC LIMIT ".$start.",".$limit;
 $result = mysqli_query($conn,$q);
 
@@ -175,6 +218,7 @@ Search
 <th>Age</th>
 <th>Gender</th>
 <th>Contact</th>
+<th>Email-id</th>
 <th>Batch</th>
 <th>Plan</th>
 <th>Fees</th>
@@ -195,6 +239,7 @@ while($row=mysqli_fetch_assoc($result))
 <td><?php echo $row['Age']; ?></td>
 <td><?php echo $row['Gender']; ?></td>
 <td><?php echo $row['CONTACT NO']; ?></td>
+<td><?php echo $row['email']; ?></td>
 <td><?php echo $row['BATCH']; ?></td>
 <td><?php echo $row['PLAN']; ?></td>
 <td><?php echo $row['FEES']; ?></td>
@@ -202,7 +247,7 @@ while($row=mysqli_fetch_assoc($result))
 
 <td>
 <a class="update" href="update.php?id=<?php echo $row['ID']; ?>">Update</a> |
-<a class="delete" href="delete.php?id=<?php echo $row['ID']; ?>">Delete</a>
+<a class="delete" href="delete.php?id=<?php echo $row['ID']; ?>&email=<?php echo $row['email']; ?>">Delete</a>
 </td>
 </tr>
 
@@ -212,7 +257,32 @@ while($row=mysqli_fetch_assoc($result))
 
 </table>
 <?php
-$total_query = "SELECT COUNT(*) as total FROM members".$where;
+$total_query = "SELECT COUNT(*) as total FROM members WHERE 1=1";
+
+if($status == "active"){
+$total_query .= " AND DATE_ADD(Join_date, INTERVAL 
+CASE 
+WHEN PLAN='MONTHLY' THEN 1
+WHEN PLAN='QUARTERLY' THEN 3
+WHEN PLAN='HALFYEARLY' THEN 6
+WHEN PLAN='ANNUALLY' THEN 12
+END MONTH) >= CURDATE()";
+}
+
+if($status == "expired"){
+$total_query .= " AND DATE_ADD(Join_date, INTERVAL 
+CASE 
+WHEN PLAN='MONTHLY' THEN 1
+WHEN PLAN='QUARTERLY' THEN 3
+WHEN PLAN='HALFYEARLY' THEN 6
+WHEN PLAN='ANNUALLY' THEN 12
+END MONTH) < CURDATE()";
+}
+
+if(isset($_GET['search']) && $_GET['search'] != ""){
+$search = mysqli_real_escape_string($conn,$_GET['search']);
+$total_query .= " AND NAME LIKE '%$search%'";
+}
 
 $totalq = mysqli_query($conn,$total_query);
 $totaldata = mysqli_fetch_assoc($totalq);
@@ -220,8 +290,14 @@ $total_pages = ceil($totaldata['total']/$limit);
 echo "<div style='margin-top:15px;'>";
 
 $search_param = "";
+$status_param = "";
+
 if(isset($_GET['search']) && $_GET['search'] != ""){
-    $search_param = "&search=".$_GET['search'];
+$search_param = "&search=".$_GET['search'];
+}
+
+if(isset($_GET['status'])){
+$status_param = "&status=".$_GET['status'];
 }
     
 if($page > 1){
@@ -231,7 +307,7 @@ style='padding:8px 12px;background:black;color:white;margin:5px;text-decoration:
 }
 
 for($i=1;$i<=$total_pages;$i++){
-echo "<a href='?page=".$i.$search_param."' 
+echo "<a href='?page=".$i.$search_param.$status_param."' 
 style='padding:8px 12px;background:#ff512f;color:white;margin:5px;text-decoration:none;border-radius:6px;'>$i</a>";
 }
 

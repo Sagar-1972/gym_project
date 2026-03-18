@@ -79,7 +79,7 @@ body{
 
             <a class="btn" href="admin_login.php">Admin Login</a>
             <a class="btn" href="user_login.php">User Login</a>
-            <a class="btn" href="register.php">New User Register</a>
+     
         </div>
 
     </div>

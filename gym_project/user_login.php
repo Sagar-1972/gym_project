@@ -9,7 +9,9 @@ if(isset($_POST['login']))
 $email=$_POST['email'];
 $pass=$_POST['password'];
 
-$q="SELECT * FROM users WHERE email='$email' AND password='$pass'";
+$q="SELECT * FROM members 
+WHERE email='$email' 
+AND `CONTACT NO`='$pass'";
 $r=mysqli_query($conn,$q);
 
 if(mysqli_num_rows($r)>0)
@@ -106,23 +108,6 @@ transform:translateY(-3px);
 box-shadow:0 10px 20px rgba(255,81,47,0.6);
 }
 
-/* REGISTER LINK */
-
-.register{
-margin-top:15px;
-font-size:14px;
-}
-
-.register a{
-color:#ff512f;
-text-decoration:none;
-font-weight:600;
-}
-
-.register a:hover{
-text-decoration:underline;
-}
-
 </style>
 </head>
 
@@ -148,9 +133,6 @@ text-decoration:underline;
 
 </form>
 
-<div class="register">
-New User ? <a href="register.php">Register Here</a>
-</div>
 
 </div>
 

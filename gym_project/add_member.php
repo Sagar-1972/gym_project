@@ -1,7 +1,6 @@
 <?php
 session_start();
 include("db.php");
-
 $msg="";
 
 if(isset($_POST['add']))
@@ -10,12 +9,14 @@ $name=$_POST['name'];
 $age=$_POST['age'];
 $gender=$_POST['gender'];
 $phone=$_POST['phone'];
+$email = $_POST['email'];
 $batch=$_POST['batch'];
-$plan=$_POST['plan'];
+$plan=$_POST['PLAN'];
+$plan_months = $_POST['plan_months'];
 $fees=$_POST['fees'];
 
-$q="INSERT INTO members(NAME,Age,Gender,`CONTACT NO`,BATCH,PLAN,FEES,Join_date)
-VALUES('$name','$age','$gender','$phone','$batch','$plan','$fees',CURDATE())";
+$q="INSERT INTO members(NAME,Age,Gender,`CONTACT NO`,email,BATCH,PLAN,FEES,Join_date)
+VALUES('$name','$age','$gender','$phone','$email','$batch','$plan','$fees',CURDATE())";
 
 if(mysqli_query($conn,$q))
 {
@@ -25,8 +26,13 @@ else
 {
 $msg="Error Adding Member";
 }
+
 }
+$user_q = "INSERT INTO users(email,password) VALUES('$email','$phone')";
+mysqli_query($conn,$user_q);
 ?>
+
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -213,6 +219,10 @@ to{transform:scale(1);opacity:1;}
 <div class="form-group">
 <input type="text" name="phone" placeholder="Contact Number" required>
 </div>
+<div class="form-group">
+<input type="email" name="email" placeholder="Enter Email" required>
+</div>
+    
 
 <div class="form-group">
 <select name="batch" required>
@@ -223,12 +233,11 @@ to{transform:scale(1);opacity:1;}
 </div>
 
 <div class="form-group">
-<select name="plan" required>
-<option value="">Select Plan</option>
-<option>MONTHLY</option>
-<option>QUARTERLY</option>
-<option>HALF YEAR</option>
-<option>ANNUALLY</option>
+<select name="PLAN" required>
+<option value="1">Monthly</option>
+<option value="3">Quarterly</option>
+<option value="6">Half Year</option>
+<option value="12">ANNUALLY</option>
 </select>
 </div>
 
