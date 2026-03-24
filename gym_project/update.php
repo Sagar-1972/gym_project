@@ -1,22 +1,33 @@
 <?php
 session_start();
 include("db.php");
-
+$plans = mysqli_query($conn,"SELECT * FROM plans");
 $id=$_GET['id'];
-
 $q="SELECT * FROM members WHERE ID='$id'";
 $result=mysqli_query($conn,$q);
 $row=mysqli_fetch_assoc($result);
 
 if(isset($_POST['update']))
 {
+    $old = mysqli_fetch_assoc(mysqli_query($conn,
+"SELECT plan_id FROM members WHERE ID='$id'"));
+
+$old_plan = $old['plan_id'];
 $name=$_POST['name'];
 $age=$_POST['age'];
 $gender=$_POST['gender'];
 $phone=$_POST['phone'];
 $batch=$_POST['batch'];
-$plan=$_POST['plan'];
-$fees=$_POST['fees'];
+$plan_id = $_POST['plan_id'];
+
+$get_plan = mysqli_fetch_assoc(mysqli_query($conn,
+"SELECT * FROM plans WHERE plan_id='$plan_id'"));
+
+$duration = $get_plan['duration'];
+$fees = $get_plan['amount'];
+
+$join_date = date('Y-m-d');
+$expiry_date = date('Y-m-d', strtotime("+$duration months"));
 
 $u="UPDATE members SET
 NAME='$name',
@@ -24,8 +35,9 @@ Age='$age',
 Gender='$gender',
 `CONTACT NO`='$phone',
 BATCH='$batch',
-PLAN='$plan',
-FEES='$fees'
+plan_id='$plan_id',
+FEES='$fees',
+expiry_date='$expiry_date'
 WHERE ID='$id'";
 
 mysqli_query($conn,$u);
@@ -34,6 +46,11 @@ echo "<script>
 alert('✅ Member Updated Successfully');
 window.location='view.php';
 </script>";
+    if($old_plan != $plan_id)
+{
+mysqli_query($conn,"INSERT INTO payments(member_id,amount,payment_date)
+VALUES('$id','$fees',CURDATE())");
+}
 }
 ?>
 
@@ -183,18 +200,23 @@ color:white;
 </div>
 
 <div class="form-group">
-<select name="plan">
-<option <?php if($row['PLAN']=="MONTHLY") echo "selected"; ?>>MONTHLY</option>
-<option <?php if($row['PLAN']=="QUARTERLY") echo "selected"; ?>>QUARTERLY</option>
-<option <?php if($row['PLAN']=="HALF YEAR") echo "selected"; ?>>HALF YEAR</option>
-<option <?php if($row['PLAN']=="ANNUALLY") echo "selected"; ?>>ANNUALLY</option>
+<select name="plan_id" required>
+
+<option value="">Select Plan</option>
+
+<?php while($p = mysqli_fetch_assoc($plans)){ ?>
+
+<option value="<?php echo $p['plan_id']; ?>"
+<?php if($row['plan_id'] == $p['plan_id']){ echo "selected"; } ?>>
+
+<?php echo $p['plan_name']; ?>
+
+</option>
+
+<?php } ?>
+
 </select>
-</div>
-
-<div class="form-group">
-<input type="number" name="fees" value="<?php echo $row['FEES']; ?>" required>
-</div>
-
+    </div>
 <button name="update">Update Member</button>
 
 </form>

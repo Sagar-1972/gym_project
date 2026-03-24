@@ -2,37 +2,50 @@
 session_start();
 include("db.php");
 $msg="";
-
+$plans = mysqli_query($conn,"SELECT * FROM plans");
 if(isset($_POST['add']))
 {
 $name=$_POST['name'];
 $age=$_POST['age'];
 $gender=$_POST['gender'];
 $phone=$_POST['phone'];
-$email = $_POST['email'];
+$email=$_POST['email'];
 $batch=$_POST['batch'];
-$plan=$_POST['PLAN'];
-$plan_months = $_POST['plan_months'];
-$fees=$_POST['fees'];
+$plan_id=$_POST['plan_id'];
 
-$q="INSERT INTO members(NAME,Age,Gender,`CONTACT NO`,email,BATCH,PLAN,FEES,Join_date)
-VALUES('$name','$age','$gender','$phone','$email','$batch','$plan','$fees',CURDATE())";
+/* GET PLAN DETAILS */
+$get_plan = mysqli_fetch_assoc(mysqli_query($conn,
+"SELECT * FROM plans WHERE plan_id='$plan_id'"));
+
+$duration = $get_plan['duration'];
+$fees = $get_plan['amount'];
+
+$join_date = date('Y-m-d');
+$expiry_date = date('Y-m-d', strtotime("+$duration months"));
+
+$q="INSERT INTO members(NAME,Age,Gender,`CONTACT NO`,email,BATCH,plan_id,FEES,Join_date,expiry_date)
+VALUES('$name','$age','$gender','$phone','$email','$batch','$plan_id','$fees','$join_date','$expiry_date')";
 
 if(mysqli_query($conn,$q))
 {
+$member_id = mysqli_insert_id($conn);
+
+/* INSERT PAYMENT ONLY HERE */
+mysqli_query($conn,"INSERT INTO payments(member_id,amount,payment_date)
+VALUES('$member_id','$fees',CURDATE())");
+
+/* USER LOGIN */
+mysqli_query($conn,"INSERT INTO users(email,password)
+VALUES('$email','$phone')");
+
 $msg="Member Added Successfully";
 }
 else
 {
 $msg="Error Adding Member";
 }
-
 }
-$user_q = "INSERT INTO users(email,password) VALUES('$email','$phone')";
-mysqli_query($conn,$user_q);
 ?>
-
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -233,16 +246,14 @@ to{transform:scale(1);opacity:1;}
 </div>
 
 <div class="form-group">
-<select name="PLAN" required>
-<option value="1">Monthly</option>
-<option value="3">Quarterly</option>
-<option value="6">Half Year</option>
-<option value="12">ANNUALLY</option>
+<select name="plan_id" required>
+<option value="">Select Plan</option>
+<?php while($p=mysqli_fetch_assoc($plans)){ ?>
+<option value="<?php echo $p['plan_id']; ?>">
+<?php echo $p['plan_name']; ?>
+</option>
+<?php } ?>
 </select>
-</div>
-
-<div class="form-group">
-<input type="number" name="fees" placeholder="Fees Amount" required>
 </div>
 
 <button type="submit" name="add">Add Member</button>

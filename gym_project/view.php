@@ -1,72 +1,56 @@
 <?php
 session_start();
 include("db.php");
+
 $status = "";
 if(isset($_GET['status'])){
     $status = $_GET['status'];
 }
-$total_q = mysqli_query($conn,"SELECT COUNT(*) as total FROM members");
-$total = mysqli_fetch_assoc($total_q)['total'];
 
-$active_q = mysqli_query($conn,"
-SELECT COUNT(*) as active FROM members
-WHERE DATE_ADD(Join_date, INTERVAL 
-CASE 
-WHEN PLAN='MONTHLY' THEN 1
-WHEN PLAN='QUARTERLY' THEN 3
-WHEN PLAN='HALFYEARLY' THEN 6
-WHEN PLAN='ANNUALLY' THEN 12
-END MONTH) >= CURDATE()
-");
-$active = mysqli_fetch_assoc($active_q)['active'];
-
-$expired = $total - $active;
 $limit = 5;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if($page < 1){ $page = 1; }
 
 $start = ($page - 1) * $limit;
-$slno = $start +1;
 
-
-$q = "SELECT * FROM members WHERE 1=1";
-
-/* STATUS FILTER */
+/* MAIN QUERY */
+$q = "SELECT members.*, plans.plan_name
+FROM members
+LEFT JOIN plans ON members.plan_id = plans.plan_id
+WHERE 1=1";
 
 if($status == "active"){
-$q .= " AND DATE_ADD(Join_date, INTERVAL 
-CASE 
-WHEN PLAN='MONTHLY' THEN 1
-WHEN PLAN='QUARTERLY' THEN 3
-WHEN PLAN='HALFYEARLY' THEN 6
-WHEN PLAN='ANNUALLY' THEN 12
-END MONTH) >= CURDATE()";
+    $q .= " AND expiry_date >= CURDATE()";
 }
-
 if($status == "expired"){
-$q .= " AND DATE_ADD(Join_date, INTERVAL 
-CASE 
-WHEN PLAN='MONTHLY' THEN 1
-WHEN PLAN='QUARTERLY' THEN 3
-WHEN PLAN='HALFYEARLY' THEN 6
-WHEN PLAN='ANNUALLY' THEN 12
-END MONTH) < CURDATE()";
+    $q .= " AND expiry_date < CURDATE()";
 }
-
-/* SEARCH FILTER */
 
 if(isset($_GET['search']) && $_GET['search'] != ""){
-$search = mysqli_real_escape_string($conn,$_GET['search']);
-$q .= " AND NAME LIKE '%$search%'";
+    $search = mysqli_real_escape_string($conn,$_GET['search']);
+    $q .= " AND NAME LIKE '%$search%'";
 }
 
-$q .= " ORDER BY ID ASC LIMIT ".$start.",".$limit;
+$q .= " ORDER BY ID ASC LIMIT $start,$limit";
+
 $result = mysqli_query($conn,$q);
 
-if(!$result){
-    die(mysqli_error($conn));
+/* COUNT */
+$count_query = "SELECT COUNT(*) as total FROM members WHERE 1=1";
+
+if($status == "active"){
+    $count_query .= " AND expiry_date >= CURDATE()";
+}
+if($status == "expired"){
+    $count_query .= " AND expiry_date < CURDATE()";
+}
+if(isset($_GET['search']) && $_GET['search'] != ""){
+    $count_query .= " AND NAME LIKE '%$search%'";
 }
 
+$countq = mysqli_query($conn,$count_query);
+$totaldata = mysqli_fetch_assoc($countq);
+$total_pages = ceil($totaldata['total']/$limit);
 ?>
 
 <!DOCTYPE html>
@@ -79,14 +63,11 @@ if(!$result){
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 
 <style>
-
 body{
 margin:0;
 font-family:'Poppins',sans-serif;
 background:url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48') no-repeat center center/cover;
 }
-
-/* DARK OVERLAY */
 
 .overlay{
 min-height:100vh;
@@ -94,15 +75,11 @@ background:linear-gradient(rgba(0,0,0,0.9),rgba(0,0,0,0.85));
 padding:40px;
 }
 
-/* TITLE */
-
 h1{
 text-align:center;
 color:white;
 margin-bottom:30px;
 }
-
-/* GLASS TABLE BOX */
 
 .table-box{
 background:rgba(255,255,255,0.08);
@@ -111,8 +88,6 @@ padding:25px;
 border-radius:20px;
 box-shadow:0 20px 40px rgba(0,0,0,0.7);
 }
-
-/* TABLE */
 
 table{
 width:100%;
@@ -123,7 +98,6 @@ color:white;
 th{
 background:linear-gradient(45deg,#ff512f,#dd2476);
 padding:14px;
-font-size:15px;
 }
 
 td{
@@ -136,21 +110,8 @@ tr:hover td{
 background:rgba(255,255,255,0.12);
 }
 
-/* BUTTONS */
-
-.update{
-color:#00ffea;
-text-decoration:none;
-font-weight:600;
-}
-
-.delete{
-color:#ff4d4d;
-text-decoration:none;
-font-weight:600;
-}
-
-/* DASHBOARD BUTTON */
+.update{color:#00ffea;text-decoration:none;font-weight:600;}
+.delete{color:#ff4d4d;text-decoration:none;font-weight:600;}
 
 .back{
 display:inline-block;
@@ -167,7 +128,6 @@ font-weight:600;
 background:#ff512f;
 color:white;
 }
-
 </style>
 </head>
 
@@ -178,27 +138,9 @@ color:white;
 <a class="back" href="admin_dashboard.php">← Dashboard</a>
 
 <h1>💪 Gym Members List</h1>
-<?php
-$count_query = "SELECT COUNT(*) as total FROM members";
-$where = "";
-
-if(isset($_GET['search']) && $_GET['search'] != ""){
-    $search = mysqli_real_escape_string($conn,$_GET['search']);
-    $where = " WHERE NAME LIKE '%$search%'";
-}
-
-$count_query .= $where;
-$countq = mysqli_query($conn,$count_query);
-$countdata = mysqli_fetch_assoc($countq);
-?>
-
-<div style="background:linear-gradient(45deg,#ff512f,#dd2476);
-padding:12px;border-radius:10px;color:white;
-width:220px;margin-bottom:15px;font-size:22px;">
-Total Members : <?php echo $countdata['total']; ?>
-</div>
 
 <form method="GET" style="margin-bottom:15px;">
+<input type="hidden" name="status" value="<?php echo $status; ?>">
 <input type="text" name="search"
 value="<?php if(isset($_GET['search'])) echo $_GET['search']; ?>"
 placeholder="Search Name..."
@@ -211,28 +153,33 @@ Search
 <div class="table-box">
 
 <table>
-
 <tr>
-<th>ID</th>
+<th>SL</th>
 <th>Name</th>
 <th>Age</th>
 <th>Gender</th>
 <th>Contact</th>
-<th>Email-id</th>
+<th>Email</th>
 <th>Batch</th>
 <th>Plan</th>
 <th>Fees</th>
 <th>Join Date</th>
+<th>Expiry</th>
+<th>Status</th>
 <th>Action</th>
 </tr>
 
 <?php
-
-
 $sn = $start + 1;
-while($row=mysqli_fetch_assoc($result))
-{
+while($row = mysqli_fetch_assoc($result)){
+
+$expiry = $row['expiry_date'];
+
+$status_badge = (strtotime($expiry) >= strtotime(date('Y-m-d')))
+? "<span style='color:#00ff9c;font-weight:bold;'>ACTIVE</span>"
+: "<span style='color:#ff4d4d;font-weight:bold;'>EXPIRED</span>";
 ?>
+
 <tr>
 <td><?php echo $sn++; ?></td>
 <td><?php echo $row['NAME']; ?></td>
@@ -241,87 +188,41 @@ while($row=mysqli_fetch_assoc($result))
 <td><?php echo $row['CONTACT NO']; ?></td>
 <td><?php echo $row['email']; ?></td>
 <td><?php echo $row['BATCH']; ?></td>
-<td><?php echo $row['PLAN']; ?></td>
+<td><?php echo $row['plan_name']; ?></td>
 <td><?php echo $row['FEES']; ?></td>
 <td><?php echo $row['Join_date']; ?></td>
-
+<td><?php echo $expiry; ?></td>
+<td><?php echo $status_badge; ?></td>
 <td>
 <a class="update" href="update.php?id=<?php echo $row['ID']; ?>">Update</a> |
 <a class="delete" href="delete.php?id=<?php echo $row['ID']; ?>&email=<?php echo $row['email']; ?>">Delete</a>
 </td>
 </tr>
 
-<?php
-}
-?>
+<?php } ?>
 
 </table>
+
+<br>
+
 <?php
-$total_query = "SELECT COUNT(*) as total FROM members WHERE 1=1";
+$search_param = isset($_GET['search']) ? "&search=".$_GET['search'] : "";
+$status_param = isset($_GET['status']) ? "&status=".$_GET['status'] : "";
 
-if($status == "active"){
-$total_query .= " AND DATE_ADD(Join_date, INTERVAL 
-CASE 
-WHEN PLAN='MONTHLY' THEN 1
-WHEN PLAN='QUARTERLY' THEN 3
-WHEN PLAN='HALFYEARLY' THEN 6
-WHEN PLAN='ANNUALLY' THEN 12
-END MONTH) >= CURDATE()";
-}
-
-if($status == "expired"){
-$total_query .= " AND DATE_ADD(Join_date, INTERVAL 
-CASE 
-WHEN PLAN='MONTHLY' THEN 1
-WHEN PLAN='QUARTERLY' THEN 3
-WHEN PLAN='HALFYEARLY' THEN 6
-WHEN PLAN='ANNUALLY' THEN 12
-END MONTH) < CURDATE()";
-}
-
-if(isset($_GET['search']) && $_GET['search'] != ""){
-$search = mysqli_real_escape_string($conn,$_GET['search']);
-$total_query .= " AND NAME LIKE '%$search%'";
-}
-
-$totalq = mysqli_query($conn,$total_query);
-$totaldata = mysqli_fetch_assoc($totalq);
-$total_pages = ceil($totaldata['total']/$limit);
-echo "<div style='margin-top:15px;'>";
-
-$search_param = "";
-$status_param = "";
-
-if(isset($_GET['search']) && $_GET['search'] != ""){
-$search_param = "&search=".$_GET['search'];
-}
-
-if(isset($_GET['status'])){
-$status_param = "&status=".$_GET['status'];
-}
-    
 if($page > 1){
-echo "<a href='?page=".($page-1).
-$search_param."'
-style='padding:8px 12px;background:black;color:white;margin:5px;text-decoration:none;border-radius:6px;'>Previous</a>";
+echo "<a href='?page=".($page-1).$search_param.$status_param."' class='back'>Previous</a>";
 }
 
 for($i=1;$i<=$total_pages;$i++){
-echo "<a href='?page=".$i.$search_param.$status_param."' 
-style='padding:8px 12px;background:#ff512f;color:white;margin:5px;text-decoration:none;border-radius:6px;'>$i</a>";
+echo "<a href='?page=$i$search_param$status_param' class='back'>$i</a>";
 }
 
 if($page < $total_pages){
-echo "<a href='?page=".($page+1). 
-$search_param."'
-style='padding:8px 12px;background:black;color:white;margin:5px;text-decoration:none;border-radius:6px;'>Next</a>";
+echo "<a href='?page=".($page+1).$search_param.$status_param."' class='back'>Next</a>";
 }
-
-echo "</div>";
 ?>
 
 </div>
 </div>
-
 </body>
 </html>
