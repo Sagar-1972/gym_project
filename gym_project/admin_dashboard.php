@@ -4,13 +4,15 @@ include("db.php");
 
 /* COUNTS */
 $total = mysqli_fetch_assoc(mysqli_query($conn,
-"SELECT COUNT(*) as t FROM members"))['t'];
-
+"SELECT COUNT(*) as t FROM members WHERE status='active'"))['t'];
 $active = mysqli_fetch_assoc(mysqli_query($conn,
-"SELECT COUNT(*) as t FROM members WHERE expiry_date >= CURDATE()"))['t'];
-
+"SELECT COUNT(*) as t FROM members 
+WHERE status='active' AND expiry_date >= CURDATE()"))['t'];
 $expired = mysqli_fetch_assoc(mysqli_query($conn,
-"SELECT COUNT(*) as t FROM members WHERE expiry_date < CURDATE()"))['t'];
+"SELECT COUNT(*) as t FROM members 
+WHERE status='active' AND expiry_date < CURDATE()"))['t'];
+$deleted = mysqli_fetch_assoc(mysqli_query($conn,
+"SELECT COUNT(*) as t FROM members WHERE status='deleted'"))['t'];
 ?>
 
 <!DOCTYPE html>
@@ -141,15 +143,20 @@ font-size:32px;
 <div class="card">
 <h3>Active Members</h3>
 <h2><?php echo $active; ?></h2>
-    <a href="view.php?status=active">✅ Active Members</a>
+    <a href="active_members.php">✅ Active Members</a>
 </div>
 
 <div class="card">
 <h3>Expired Members</h3>
 <h2><?php echo $expired; ?></h2>
-    <a href="view.php?status=expired">❌ Expired Members</a>
+    <a href="expired_members.php">❌ Expired Members</a>
 </div>
 
+    <div class="card">
+<h3>Deleted Members</h3>
+<h2><?php echo $deleted; ?></h2>
+<a href="deleted_members.php">🗑 View Deleted</a>
+</div>
 </div>
 
 </div>

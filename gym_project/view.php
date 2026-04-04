@@ -17,7 +17,7 @@ $start = ($page - 1) * $limit;
 $q = "SELECT members.*, plans.plan_name
 FROM members
 LEFT JOIN plans ON members.plan_id = plans.plan_id
-WHERE 1=1";
+WHERE status='active'";
 
 if($status == "active"){
     $q .= " AND expiry_date >= CURDATE()";
@@ -36,7 +36,7 @@ $q .= " ORDER BY ID ASC LIMIT $start,$limit";
 $result = mysqli_query($conn,$q);
 
 /* COUNT */
-$count_query = "SELECT COUNT(*) as total FROM members WHERE 1=1";
+$count_query = "SELECT COUNT(*) as total FROM members WHERE status='active'";
 
 if($status == "active"){
     $count_query .= " AND expiry_date >= CURDATE()";
